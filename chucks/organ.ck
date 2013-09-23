@@ -127,7 +127,6 @@ class Finger {
 	float position[3];
 	string id;
 	SinOsc osc;
-	float coeff;
 
 	fun void init(string _id, UGen sink, float freq, float gain) {
 		osc => sink;
@@ -145,6 +144,7 @@ class Hand {
 	string id;
 	Finger fingers[0]; // map
 	string fIds // list
+	Gain audio;
 	float palm[3];
 	OSCR @ receiver;
 	OSCE @ event;
@@ -153,26 +153,26 @@ class Hand {
 		_id => id;
 		_palm @=> palm;
 		r @=> receiver;
-		receiver.event("/hand/"+id, )
+		receiver.event("/hand/"+id);
 	}
 
 	fun void updateCoeffs() {
-		for (0 => int i; i < fIds.size(); i++) {
-		fingers[fIds[i]] @=> Finger @ f;
-			angle(f.position, palm) => f.coeff;
-		}
-		unit(coeff) @=> coeff;
+		0 => float totalSqGain;
 		for (0 => int i; i < fIds.size(); i++) {
 			fingers[fIds[i]] @=> Finger @ f;
-			Std.fabs(f.coeff) => f.osc.gain;
-			f * (i*palm[1]+1) => f.osc.freq;
+			Std.fabs(angle(f.position, palm)) => float g;
+			g*g +=> totalSqGain;
+			g => f.osc.gain;
 		}
+		1/Math.sqrt(totalSqGain) => audio.gain;
 	}
 
 	fun void addFinger(string fid) {
 		fIds << fid;
 		Finger f;
+		f.init(fid, audio, ***FREQ***);
 		f @=> fingers[fid];
+		f * (i*palm[1]+1) => f.osc.freq;
 	}
  
 }
